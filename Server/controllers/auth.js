@@ -140,8 +140,10 @@ exports.signUp = async (req, res) => {
 
 exports.login = async (req, res) => {
     try {
+        // Extract Email, Password from Request Body
         const { email, password } = req.body;
 
+        // Check if Both Email, and Password Exist, i.e. are not NULL or undefined
         if (!email || !password) {
             return res.status(403).json({
                 success: false,
@@ -149,6 +151,7 @@ exports.login = async (req, res) => {
             })
         }
 
+        // Check if the User Exists, if not return Error
         const user = await User.findOne({ email }).populate("additionalDetails");
         if (!user) {
             return res.status().json({
@@ -157,6 +160,7 @@ exports.login = async (req, res) => {
             })
         }
 
+        // Check if the Entered Password is Correct, if not return Error
         const isPasswordCorrect = await bcrypt.compare(password, user.password);
         if (isPasswordCorrect) {
             const payload = {
@@ -165,10 +169,12 @@ exports.login = async (req, res) => {
                 role: user.role
             }
 
+            // If the Password is Correct, Generate JWT Token
             const token = jwt.sign(payload, process.env.JWT_SECRET, {
                 expiresIn: "2h"
             })
 
+            // Add Token and Password in the User
             user.token = token;
             user.password = undefined;
 
@@ -177,6 +183,7 @@ exports.login = async (req, res) => {
                 httpOnly: true
             }
 
+            // Generate a Cookie and Send Response
             res.cookie("token", token, options).status(200).json({
                 success: true,
                 token: token,
