@@ -13,5 +13,5 @@ const tagSchema = new mongoose.Schema({
         ref: "Course"
     }
 })
-
+ 
 module.exports = mongoose.model("Tag", tagSchema);
