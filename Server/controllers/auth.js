@@ -3,6 +3,7 @@ const bcrypt = require("bcrypt");
 const User = require("../models/User");
 const OTP = require("../models/OTP");
 const Profile = require("../models/Profile");
+require("dotenv").config();
 
 exports.sendOTP = async (req, res) => {
     try {
@@ -133,6 +134,70 @@ exports.signUp = async (req, res) => {
         return res.status(500).json({
             success: false,
             message: "User Cannot be Registered"
+        })
+    }
+}
+
+exports.login = async (req, res) => {
+    try {
+        const { email, password } = req.body;
+
+        if (!email || !password) {
+            return res.status(403).json({
+                success: false,
+                message: "All Fields are Required"
+            })
+        }
+
+        const user = await User.findOne({ email }).populate("additionalDetails");
+        if (!user) {
+            return res.status().json({
+                success: false,
+                message: "User Does Not Exist"
+            })
+        }
+
+        const isPasswordCorrect = await bcrypt.compare(password, user.password);
+        if (isPasswordCorrect) {
+            const payload = {
+                email: user.email,
+                id: user._id,
+                role: user.role
+            }
+
+            const token = jwt.sign(payload, process.env.JWT_SECRET, {
+                expiresIn: "2h"
+            })
+
+            user.token = token;
+            user.password = undefined;
+
+            const options = {
+                expiresIn: Date(Date.now() + 3 * 24 * 60 * 60 * 1000),
+                httpOnly: true
+            }
+
+            res.cookie("token", token, options).status(200).json({
+                success: true,
+                token: token,
+                user: user,
+                message: "Logged In Successfully"
+            })
+        }
+        else {
+            return res.status(401).json({
+                success: false,
+                message: "Password Did Not Match"
+            })
+        }
+    }
+    catch (error) {
+        console.log("An Error Occurred While Logging In");
+        console.log(error);
+
+        return res.status(500).json({
+            success: false,
+            message: "Login Failure"
         })
     }
 }
