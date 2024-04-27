@@ -6,9 +6,11 @@ require("dotenv").config();
 
 exports.createCourse = async (req, res) => {
     try {
+        // Extract All the Necessary Information from Request Body
         const { courseName, courseDescription, whatYouWillLearn, price, tag } = req.body;
         const thumbnail = req.files.thumbnailImage;
 
+        // Verify if all the Values Exist and are not NULL or Undefined
         if (!courseName || !courseDescription || !whatYouWillLearn || !price || !tag || !thumbnail) {
             return res.status(400).json({
                 success: false,
@@ -16,10 +18,12 @@ exports.createCourse = async (req, res) => {
             })
         }
 
+        // Extract the User(Instructor) who is Creating the Course
         const userId = req.user.id;
         const instructorDetails = await User.findById(userId);
         console.log("Instructor Details: ", instructorDetails);
 
+        // Verify Whether the Instructor Exists
         if (!instructorDetails) {
             return res.status(404).json({
                 success: false,
@@ -27,6 +31,7 @@ exports.createCourse = async (req, res) => {
             })
         }
 
+        // Extract the Tag Associated with the Course
         const tagDetails = await Tags.findById(tag);
         if (!tagDetails) {
             return res.status(404).json({
@@ -35,12 +40,15 @@ exports.createCourse = async (req, res) => {
             })
         }
 
+        // Upload the Thumbnail Image to Cloudinary
         const thumbnailImage = await uploadImageToCloudinary(thumbnail, process.env.FOLDER_NAME);
 
+        // Create a New Course
         const newCourse = await Course.create({
             courseName, courseDescription, instructor: instructorDetails._id, whatYouWillLearn, price, tag: tagDetails._id, thumbnail: thumbnailImage.secure_url
         })
 
+        // Update Instructor's Courses with Newly Created Course
         await User.findByIdAndUpadate(
             { _id: instructorDetails._id },
             {
@@ -51,6 +59,7 @@ exports.createCourse = async (req, res) => {
             { new: true }
         )
 
+        // Update the Tag with Newly Created Course
         await Tag.findByIdAndUpadate(
             { tag: tagDetails._id },
             {
